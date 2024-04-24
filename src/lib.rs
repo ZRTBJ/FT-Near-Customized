@@ -26,7 +26,6 @@ use near_sdk::{
     assert_one_yocto, env, log, near_bindgen, AccountId, Balance, PanicOnDefault, PromiseOrValue,
 };
 use std::convert::TryInto;
-use std::u128;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -49,12 +48,12 @@ impl Contract {
             owner_id,
             FungibleTokenMetadata {
                 spec: FT_METADATA_SPEC.to_string(),
-                name: "Example NEAR fungible token".to_string(),
-                symbol: "EXAMPLE".to_string(),
+                name: "VEX".to_string(),
+                symbol: "VEX".to_string(),
                 icon: Some(DATA_IMAGE_SVG_NEAR_ICON.to_string()),
                 reference: None,
                 reference_hash: None,
-                decimals: 24,
+                decimals: 8,
             },
             max_supply
         )
@@ -81,13 +80,23 @@ impl Contract {
     pub fn new(owner_id: AccountId, metadata: FungibleTokenMetadata, max_supply: Balance) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         metadata.assert_valid();
-        let mut this = Self {
+        let this = Self {
             token: FungibleToken::new(b"a".to_vec()),
             metadata: LazyOption::new(b"m".to_vec(), Some(&metadata)),
             owner_id: owner_id,
             max_supply: max_supply
         };
         this
+    }
+
+    #[payable]
+    pub fn update_metadata(&mut self, metadata: FungibleTokenMetadata) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.owner_id,
+            "ERR_NOT_ALLOWED"
+        );
+        self.metadata.replace(&metadata);
     }
 
     pub fn mint(&mut self, account_id: ValidAccountId, amount: U128) -> U128 {
@@ -110,7 +119,6 @@ impl Contract {
     }
 
     pub fn burn(&mut self, account_id: ValidAccountId, amount: U128) {
-        assert_one_yocto();
         assert_eq!(
             env::predecessor_account_id(),
             self.owner_id,
@@ -121,7 +129,6 @@ impl Contract {
     }
 
     pub fn change_max_supply(&mut self, max_supply: Balance) {
-        assert_one_yocto();
         assert_eq!(
             env::predecessor_account_id(),
             self.owner_id,
